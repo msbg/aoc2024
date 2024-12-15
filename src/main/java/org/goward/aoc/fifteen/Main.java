@@ -15,9 +15,10 @@ import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        List<String> mapDef = FileUtils.readLines(new File("C:\\monica\\projects\\AoC\\src\\15InputMap2.txt"), StandardCharsets.UTF_8);
+        List<String> mapDef = FileUtils.readLines(new File("C:\\monica\\projects\\AoC\\src\\15InputMap3.txt"), StandardCharsets.UTF_8);
         MapWarehouse mapWarehouse = new MapWarehouse(mapDef);
-        List<String> moveDefs = FileUtils.readLines(new File("C:\\monica\\projects\\AoC\\src\\15InputMoves2.txt"), StandardCharsets.UTF_8);
+        mapWarehouse.printMap(0);
+        List<String> moveDefs = FileUtils.readLines(new File("C:\\monica\\projects\\AoC\\src\\15InputMoves3.txt"), StandardCharsets.UTF_8);
 
         char[] moveChars = String.join("", moveDefs).toCharArray();
         List<Move> moves = new ArrayList<>();
@@ -27,7 +28,7 @@ public class Main {
         int moveCount = 0;
         for(Move move:moves) {
             mapWarehouse.moveRobot(move, moveCount);
-            mapWarehouse.printMap(moveCount);
+            //mapWarehouse.printMap(moveCount);
             moveCount++;
         }
 

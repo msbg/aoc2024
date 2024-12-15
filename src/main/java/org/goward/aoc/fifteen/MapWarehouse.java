@@ -1,8 +1,10 @@
 package org.goward.aoc.fifteen;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -20,19 +22,24 @@ public class MapWarehouse {
                 switch (mapItem) {
                     case '#':
                         row.add(MapTile.WALL);
+                        row.add(MapTile.WALL);
                     break;
                     case 'O':
-                        row.add(MapTile.BOX);
+                        row.add(MapTile.BOXLEFT);
+                        row.add(MapTile.BOXRIGHT);
                         break;
                     case '@':
                         row.add(MapTile.ROBOT);
                         robotX = x;
                         robotY = y;
+                        row.add(MapTile.EMPTY);
                         break;
                     default:
                         row.add(MapTile.EMPTY);
+                        row.add(MapTile.EMPTY);
 
                 }
+                x++;
                 x++;
             }
             map.add(row);
@@ -61,6 +68,19 @@ public class MapWarehouse {
             this.y = y;
             this.mapTile = mapTile;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            BoxCoords boxCoords = (BoxCoords) o;
+            return x == boxCoords.x && y == boxCoords.y;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(x, y);
+        }
     }
 
     public void moveRobot(Move move, int mapCount) {
@@ -68,7 +88,7 @@ public class MapWarehouse {
 
         int nextX = move.nextX(robotX);
         int nextY = move.nextY(robotY);
-        Set<BoxCoords> boxCoords = getTouchingBoxCoords(new BoxCoords(nextX, nextY, MapTile.UNKNOWN), move);
+        Set<BoxCoords> boxCoords = getTouchingBoxCoords(Collections.singleton(new BoxCoords(nextX, nextY, MapTile.UNKNOWN)), move);
         if(!getMapItem(nextX, nextY).equals(MapTile.WALL)&& boxCoords.stream().noneMatch(boxCoords1 -> getMapItem(move.nextX(boxCoords1.x), move.nextY(boxCoords1.y)).equals(MapTile.WALL))) {
             //We're not going to hit a wall here, so actually move.
             //Mark all old positions as empty
@@ -82,14 +102,33 @@ public class MapWarehouse {
 
     }
 
-    private Set<BoxCoords> getTouchingBoxCoords(BoxCoords boxCoords, Move move) {
+    private Set<BoxCoords> getTouchingBoxCoords(Set<BoxCoords> boxCoordSetUnknown, Move move) {
         Set<BoxCoords> returnSet = new HashSet<>();
-        if(getMapItem(boxCoords.x, boxCoords.y).equals(MapTile.BOX)) {
-            boxCoords.mapTile = MapTile.BOX;
-            returnSet.add(boxCoords);
-            Set<BoxCoords> children = getTouchingBoxCoords(new BoxCoords(move.nextX(boxCoords.x), move.nextY(boxCoords.y),MapTile.UNKNOWN) , move);
+
+        Set<BoxCoords> newChildren = new HashSet<>();
+        boxCoordSetUnknown.forEach(boxCoords1 -> {
+            if(getMapItem(boxCoords1.x, boxCoords1.y).equals(MapTile.BOXLEFT)) {
+                boxCoords1.mapTile = MapTile.BOXLEFT;
+                returnSet.add(boxCoords1);
+                returnSet.add(new BoxCoords(boxCoords1.x+1, boxCoords1.y, MapTile.BOXRIGHT));
+                newChildren.add(new BoxCoords(move.nextX(boxCoords1.x), move.nextY(boxCoords1.y),MapTile.UNKNOWN));
+                newChildren.add(new BoxCoords(move.nextX(boxCoords1.x+1), move.nextY(boxCoords1.y),MapTile.UNKNOWN));
+            }
+            if(getMapItem(boxCoords1.x, boxCoords1.y).equals(MapTile.BOXRIGHT)) {
+                boxCoords1.mapTile = MapTile.BOXRIGHT;
+                returnSet.add(boxCoords1);
+                returnSet.add(new BoxCoords(boxCoords1.x-1, boxCoords1.y, MapTile.BOXLEFT));
+                newChildren.add(new BoxCoords(move.nextX(boxCoords1.x), move.nextY(boxCoords1.y),MapTile.UNKNOWN));
+                newChildren.add(new BoxCoords(move.nextX(boxCoords1.x-1), move.nextY(boxCoords1.y),MapTile.UNKNOWN));
+            }
+        });
+        //Now we have the full set of box co-ords, pass this down:
+        if(!newChildren.isEmpty()) {
+            newChildren.removeAll(returnSet);
+            Set<BoxCoords> children = getTouchingBoxCoords(newChildren, move);
             returnSet.addAll(children);
         }
+
         return returnSet;
     }
 
@@ -107,7 +146,7 @@ public class MapWarehouse {
 
 
     enum MapTile {
-        WALL('#'),BOX('O'),ROBOT('@'), EMPTY('.'), UNKNOWN('U');
+        WALL('#'),BOX('O'),BOXLEFT('['),BOXRIGHT(']'), ROBOT('@'), EMPTY('.'), UNKNOWN('U');
         private final char representation;
 
         MapTile(char representation) {
@@ -122,7 +161,7 @@ public class MapWarehouse {
         int total= 0;
         for(int ydx = 0; ydx < map.size(); ydx++) {
             for(int xdx = 0; xdx < map.get(ydx).size(); xdx++) {
-                if(map.get(ydx).get(xdx).equals(MapTile.BOX)) {
+                if(map.get(ydx).get(xdx).equals(MapTile.BOXLEFT)) {
                     total+=((ydx*100)+xdx);
                 }
             }
@@ -130,8 +169,4 @@ public class MapWarehouse {
         return total;
     }
 
-    class MoveData {
-        int x,y;
-
-    }
 }
