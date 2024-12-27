@@ -46,6 +46,7 @@ public class Main {
     int max;
     int[][] swaps;
     int[][] lastSwaps;
+    int swapSize;
     private List<String> initialVals;
     List<String> logicVals;
     boolean[] wanted;
@@ -53,6 +54,7 @@ public class Main {
     void setup(List<String> initialVals, List<String> logicVals, int swapSize) {
         lastSwaps =  new int[swapSize][2];
         swaps =  new int[swapSize][2];
+        this.swapSize = swapSize;
 
         this.initialVals = initialVals;
         this.logicVals = logicVals;
@@ -68,6 +70,7 @@ public class Main {
     
     void generateAllPairs() {
         int startIndex = initialVals.size();
+
         for(int a1dx = startIndex; a1dx < max; a1dx++) {
             swaps[0][0] = a1dx;
             swaps[0][1] = -1;
