@@ -9,11 +9,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public class Main {
@@ -25,7 +22,8 @@ public class Main {
         Main main = new Main();
         main.setup(initialVals, logicVals, 4);
 
-        main.generateAllPairs();
+        main.start();
+//        main.generateAllPairs();
 
 //        pairSwapSet.forEach(new Consumer<PairSwap>() {
 //            @Override
@@ -50,6 +48,7 @@ public class Main {
     private List<String> initialVals;
     List<String> logicVals;
     boolean[] wanted;
+    int initialScore;
     Circuit3 circuit;
     void setup(List<String> initialVals, List<String> logicVals, int swapSize) {
         lastSwaps =  new int[swapSize][2];
@@ -67,10 +66,88 @@ public class Main {
         long z = x + y;
         wanted = circuit.convertToBinary(z);
     }
-    
-    void generateAllPairs() {
-        int startIndex = initialVals.size();
 
+    void start() {
+        Map<Integer,List<int[][]>> scoreMap = new HashMap<>();
+        scoreMap.computeIfAbsent(0, _ -> new ArrayList<>()).add(new int[0][0]);
+        initialScore = testSwaps(new int[0][0], circuit, wanted);
+        int[][] swapsFound = null;
+        while(swapsFound==null) {
+            Integer maxScoreSoFar = scoreMap.keySet().stream().max(Integer::compareTo).get();
+            List<int[][]> nextList = scoreMap.get(maxScoreSoFar);
+            int[][] swapbase = nextList.removeFirst();
+            if(nextList.isEmpty()) {
+                scoreMap.remove(maxScoreSoFar);
+            }
+            String baseString = Arrays.deepToString(swapbase);
+            System.out.println("Testing swaps starting with base:" + baseString + " with a score so far of:" + maxScoreSoFar);
+            swapsFound = gen(swapbase, scoreMap);
+        }
+
+    }
+
+    int[][] gen(int[][] base, Map<Integer,List<int[][]>> scoreMap) {
+        int i = base.length>0?base[base.length - 1][0] + 1:initialVals.size();
+
+        for(int a1dx = i; a1dx < max; a1dx++) {
+            for (int a2dx = a1dx + 1; a2dx < max; a2dx++) {
+                int[][] swap = new int[base.length+1][4];
+                for(int idx = 0;idx < base.length; idx++) {
+                    swap[idx][0] = base[idx][0];
+                    swap[idx][1] = base[idx][1];
+                    swap[idx][2] = base[idx][2];
+                    swap[idx][3] = base[idx][3];
+                }
+                swap[base.length][0] = a1dx;
+                swap[base.length][1] = a2dx;
+                if (sanityCheck(swap)) {
+                    int scoreForSwap = testSwaps(swap, circuit, wanted);
+                    if(scoreForSwap==wanted.length) {
+                        return swap;
+                    }
+                    if(swap.length<swapSize) {
+                        swap[base.length][2] = scoreForSwap;
+                        //only add to map if more swaps are available.
+                        if(swap.length==1) {
+                            swap[swap.length - 1][3] = scoreForSwap - initialScore;
+                        } else {
+                            swap[swap.length -1][3] = scoreForSwap - swap[swap.length -2][2];
+                        }
+
+
+                        int totalScore = 0;//scoreForSwap;
+                        //totalScore+=(swapSize - swap.length)*(3);
+                        /*for (int idx = 0; idx < swap.length; idx++) {
+                            totalScore+=((swap[idx][2]) * (swapSize - idx));
+                        }*/
+                        for (int idx = 0; idx < swap.length; idx++) {
+                            totalScore+=((swap[idx][3]) );
+                        }
+                        totalScore = (totalScore * swapSize)/swap.length;
+
+
+
+                        /*for (int idx = 0; idx < swapSize - 1; idx++) {
+                            if (swap.length > idx) {
+                                totalScore += swap[idx][2];
+                            } else {
+                                //totalScore += wanted.length;
+                            }
+                        }*/
+                        //totalScore = scoreForSwap;
+                        scoreMap.computeIfAbsent(totalScore, _ -> new ArrayList<>()).add(swap);
+                    }
+
+
+                }
+            }
+        }
+        return null;
+    }
+
+    void generateAllPairs() {
+
+        int startIndex = initialVals.size();
         for(int a1dx = startIndex; a1dx < max; a1dx++) {
             swaps[0][0] = a1dx;
             swaps[0][1] = -1;
@@ -151,9 +228,7 @@ public class Main {
     private boolean sanityCheck(int[][] swaps) {
 
         for(int idx = 0; idx<swaps.length; idx++) {
-            if(idx==0 && swaps[2][1]==-1) {
-                System.out.println("a1:" + swaps[0][0] + ",a2:" + swaps[0][1] + ",b1:" + swaps[1][0] + ",b2:" + swaps[1][1] + ",c1:" + swaps[2][0] + ",c2:" + swaps[2][1]);
-            }
+
             if(swaps[idx][0]==max ||swaps[idx][1]==max) {
                 //breached max
                 return false;
@@ -211,12 +286,9 @@ public class Main {
             newCircuit3.swap(swap);
         }
         Collections.sort(swapPrint);
-        boolean isSum = checkVal(newCircuit3, wanted);
-        System.out.println("Swaps:" + swapPrint + " verified:" + isSum);
-        if(!isSum) {
-            System.out.println("Mismatch");
-        }
-        return isSum;
+        int val = checkVal(newCircuit3, wanted);
+        System.out.println("Swaps:" + swapPrint + " verified:" + (val == wanted.length));
+        return val == wanted.length;
     }
 
     private static Circuit3 createCircuit(List<String> initialVals, List<String> logicVals) {
@@ -239,7 +311,7 @@ public class Main {
 
     List<int[][]> swapsFound = new ArrayList<>();
 
-    private void testSwaps(int[][] swaps, Circuit3 circuit, boolean[] val) {
+    private int testSwaps(int[][] swaps, Circuit3 circuit, boolean[] val) {
 
         for(int idx = 0; idx < swaps.length; idx++) {
             if(lastSwaps[idx][0]!=swaps[idx][0] ||
@@ -257,8 +329,8 @@ public class Main {
                 lastSwaps[idx][1] = swaps[idx][1];
             }
         }
-        boolean isSum = checkVal(circuit, val);
-        if(isSum) {
+        int valFound = checkVal(circuit, val);
+        if(valFound==val.length) {
 
             System.out.println("Found swaps:" );
             int[][] copy = Arrays.stream(swaps).map(int[]::clone).toArray(int[][]::new);
@@ -271,23 +343,24 @@ public class Main {
                 System.out.println("Mismatch");
             }
         }
+        return valFound;
     }
 
-    private static boolean checkVal(Circuit3 circuit, boolean[] val) {
+    private static int checkVal(Circuit3 circuit, boolean[] val) {
         int idx = 0;
+        int correctOutput = 0;
         while(idx < val.length) {
             Circuit3.Logic logic = circuit.getOutputVal(idx);
             logic.calc();
             if(logic.calculating) {
                 break;
             }
-            if (val[idx] != logic.value) {
-                //wrong answer
-                break;
+            if (val[idx] == logic.value) {
+                correctOutput++;
             }
            idx++;
         }
-        return idx==val.length;
+        return correctOutput;
     }
 
 }

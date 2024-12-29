@@ -65,6 +65,7 @@ public class Circuit3 {
                 outputWireList.add(null);
             }
             outputWireList.set(outputIndex, wire);
+            wireList.add(wire);
         } else{
             wireList.add(wire);
         }
@@ -90,6 +91,14 @@ public class Circuit3 {
     public String getWireName(int idx) {
         return wireIndexes[idx].wireName;
     }
+
+    public int[] getOutputWireDeps(int knownIncorrect) {
+        List<Integer> wires = outputWires[knownIncorrect].input.getWires();
+        wires.add(knownIncorrect);
+
+        return wires.stream().mapToInt(Integer::intValue).toArray();
+    }
+
 
     public class Logic {
         final Gate gate;
@@ -139,6 +148,28 @@ public class Circuit3 {
                 output.invalidate();
             }
         }
+
+        public List<Integer> getWires() {
+            List<Integer> wires = new ArrayList<>();
+            if(input1!=null) {
+                wires.add(getWireIndex(input1));
+                wires.addAll(input1.input.getWires());
+            }
+            if(input2!=null) {
+                wires.add(getWireIndex(input2));
+                wires.addAll(input2.input.getWires());
+            }
+            return wires;
+        }
+    }
+
+    private Integer getWireIndex(Wire wire) {
+        for(int idx = 0; idx < wireIndexes.length; idx++) {
+            if(wireIndexes[idx]==wire) {
+                return idx;
+            }
+        }
+        throw new RuntimeException("Could not find wire");
     }
 
     public enum Gate {
